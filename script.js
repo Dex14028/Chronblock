@@ -1,1 +1,539 @@
+ // VARIÁVEIS GLOBAIS
+        let currentPlayerName = "Player";
+        let gameOver = false;
+        let gameLoopTimeout = '';
+        let score = 0;
+        let isPaused = false;
+        let timerInterval = null;
+        let secondsPlayed = 0;
+        let hasShownNewRecordBanner = false; // <-- NOVA FAIXA DE RECORDE (JS)
 
+        const MAX_HIGH_SCORES = 5;
+        let highScores = JSON.parse(localStorage.getItem('chroBlockHighScores')) || [];
+
+        const CORES = [
+            null, "blue", "blue", "green", "green",
+            "yellow", "yellow", "red", "red"
+        ];
+
+        const Chroblocks = [
+            [],[
+    [1,0,0],
+    [0,0,0],
+    [0,0,0]],
+    [
+    [0,2,0],
+    [0,2,0],
+    [0,2,0]],
+    [
+    [3,0,0],
+    [3,0,0],
+    [3,3,0]
+    ],
+    [[4,4,4]
+    ,[0,4,0], 
+     [0,4,0]
+    ],
+    [[8,8,0],
+     [8,8,0],
+     [8,0,0]],
+    [
+      [6,6,0],
+      [0,6,6],
+      [0,6,0]],
+    [
+    [7,7,0],
+    [0,7,0],
+    [0,7,7]
+    ],
+    [[0,5,5],
+     [0,5,0],
+     [5,5,0]]
+];
+        const LIN = 20;
+        const COL = 10;
+        let jogo = Array.from({ length: LIN }, () => Array(COL).fill(0));
+
+        let BlocoSave = '';
+        let posX = 0, posY = 0;
+        let ProxBloco = null;
+
+        // --- FUNÇÕES DE RENDERIZAÇÃO E JOGO ---
+
+        function drawTela(){
+            const canvas = document.getElementById('CanvasJogo');
+            const chro = canvas.getContext('2d');
+            chro.clearRect(0, 0, canvas.width, canvas.height);
+            for (let y = 0; y < LIN; y++){
+                for (let x = 0; x < COL; x++){
+                    if (jogo[y][x]){
+                        chro.fillStyle = CORES[jogo[y][x]];
+                        chro.fillRect(x * 20, y * 20, 20, 20);
+                    }
+                }
+            }
+            if (BlocoSave){
+                for (let i = 0; i < BlocoSave.length; i++){
+                    for (let j = 0; j < BlocoSave[i].length; j++){
+                        if (BlocoSave[i][j]) {
+                            chro.fillStyle = CORES[BlocoSave[i][j]];
+                            chro.fillRect((posX + j) * 20, (posY + i) * 20, 20, 20);
+                        }
+                    }
+                }
+            }
+        }
+        function Colisao(movX, movY, bloco) {
+            for (let i = 0; i < bloco.length; i++){
+                for (let j = 0; j < bloco[i].length; j++){
+                    if (bloco[i][j]){
+                        let x = posX + j + movX; 
+                        let y = posY + i + movY;
+                        if (x < 0 || x >= COL || y >= LIN || (y >= 0 && jogo[y][x])){
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+        function fixaBloco(){
+            for (let i = 0; i < BlocoSave.length; i++) {
+                for (let j = 0; j < BlocoSave[i].length; j++) {
+                    if (BlocoSave[i][j]) {
+                        let x = posX + j;
+                        let y = posY + i;
+                        if (y < 0){
+                            endGame();
+                            return; 
+                        }
+                        jogo[y][x] = BlocoSave[i][j];
+                    } 
+                }
+            }
+            LinhasCompletas();
+            spawnBloco();
+        }
+        function gameLoop() {
+            clearTimeout(gameLoopTimeout);
+            if (gameOver || isPaused) return; 
+            if (Colisao(0, 1, BlocoSave)) {
+                posY++;
+            }else{
+                fixaBloco();
+                if (gameOver) return; 
+            }
+            drawTela();
+            drawScore();
+            gameLoopTimeout = setTimeout(gameLoop, 500);
+        }
+        function rotateBlock(){
+            const newBlock = [];
+            const size = BlocoSave.length;
+            for (let i = 0; i < size; i++){ 
+                newBlock[i] = [];
+                for (let j = 0; j < size; j++){
+                    newBlock[i][j] = BlocoSave[size - j - 1][i];
+                }
+            }
+            if (Colisao(0, 0, newBlock)) {
+                BlocoSave = newBlock;
+            }
+        }
+        function spawnBloco(){
+            if (ProxBloco === null){
+                let idx = Math.floor(Math.random() * (Chroblocks.length - 1)) + 1;
+                ProxBloco = JSON.parse(JSON.stringify(Chroblocks[idx]));
+            }
+            BlocoSave = ProxBloco;
+            posX = 3;
+            posY = 0;
+            let idx = Math.floor(Math.random() * (Chroblocks.length - 1)) + 1;
+            ProxBloco = JSON.parse(JSON.stringify(Chroblocks[idx]));
+            drawNext();
+            if (!Colisao(0, 0, BlocoSave)){
+                endGame();
+                return;
+            }
+        }
+        function drawNext(){
+            const canvas = document.querySelector('.coluna3 canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (!ProxBloco) return;
+            let movX = 2;
+            let movY = 2;
+            for (let i = 0; i < ProxBloco.length; i++) {
+                for (let j = 0; j < ProxBloco[i].length; j++) {
+                    if (ProxBloco[i][j]) {
+                        ctx.fillStyle = CORES[ProxBloco[i][j]];
+                        ctx.fillRect((movX + j) * 20, (movY + i) * 20, 20, 20);
+                    }
+                }
+            }
+        }
+
+        // --- FUNÇÕES DE PONTUAÇÃO E ESTADO DO JOGO ---
+
+        // MODIFICAÇÃO DE RECORDE: Função 'endGame' atualizada
+        function endGame() {
+            gameOver = true;
+            clearTimeout(gameLoopTimeout);
+            clearInterval(timerInterval); 
+            BlocoSave = null;
+            drawTela();
+            
+            // 1. Captura se é um novo recorde
+            const isNewBest = checkHighScore(score);
+            
+            drawHighScores();
+            
+            document.getElementById('pauseIcon').classList.add('hidden');
+
+            // 2. Controla a exibição da mensagem
+            const messageEl = document.getElementById('newHighScoreMessage');
+            if (isNewBest) {
+                messageEl.style.display = 'block'; // Mostra a mensagem
+            } else {
+                messageEl.style.display = 'none'; // Esconde a mensagem
+            }
+
+            // 3. Exibe a tela de Game Over (depois de configurar a mensagem)
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalTime').textContent = formatTime(secondsPlayed);
+            document.getElementById('fundo').style.filter = 'blur(5px)'; 
+        }
+
+        // MODIFICAÇÃO DE RECORDE: Função 'checkHighScore' atualizada
+        function checkHighScore(currentScore) {
+            if (currentScore === 0) return false; // Retorna 'false' se a pontuação for 0
+
+            // Verifica se é o novo recorde ANTES de adicionar a pontuação na lista
+            const isNewBestScore = highScores.length === 0 || currentScore > highScores[0].score;
+            
+            // Lógica original para verificar se é um high score (top 5)
+            const isHighScore = highScores.length < MAX_HIGH_SCORES || currentScore > highScores[highScores.length - 1].score;
+
+            if (isHighScore) {
+                const name = currentPlayerName; 
+                const newScore = { name: name, score: currentScore };
+                highScores.push(newScore);
+                highScores.sort((a, b) => b.score - a.score); // Ordena
+                highScores.splice(MAX_HIGH_SCORES); // Mantém apenas o top 5
+                localStorage.setItem('chroBlockHighScores', JSON.stringify(highScores));
+            }
+            
+            return isNewBestScore; // Retorna true se for o novo recorde, false se não
+        }
+        
+        function drawHighScores() {
+            const listElement = document.getElementById('highScoresList');
+            listElement.innerHTML = ""; 
+            if (highScores.length === 0) {
+                listElement.innerHTML = "<div style='padding: 5px;'>Nenhum recorde!</div>";
+                return;
+            }
+            for (let i = 0; i < highScores.length; i++) {
+                listElement.innerHTML += `<div>${i + 1}. ${highScores[i].name} - ${highScores[i].score}</div>`;
+            }
+        }
+        
+        // MODIFICAÇÃO DE RECORDE: Função 'reiniciarJogo' atualizada
+        function reiniciarJogo(){
+            clearTimeout(gameLoopTimeout);
+            clearInterval(timerInterval); 
+            
+            jogo = Array.from({ length: LIN }, () => Array(COL).fill(0));
+            score = 0;
+            BlocoSave = null;
+            ProxBloco = null;
+            gameOver = false; 
+            isPaused = false;
+            hasShownNewRecordBanner = false; // <-- NOVA FAIXA DE RECORDE (JS) - RESET
+            
+            // Esconde a faixa animada (caso o jogo reinicie rápido)
+            document.getElementById('liveRecordBanner').classList.remove('show');
+
+            document.getElementById('pauseScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden'); 
+
+            // LINHA ADICIONADA para esconder a mensagem de recorde
+            document.getElementById('newHighScoreMessage').style.display = 'none';
+
+            document.getElementById('fundo').style.filter = 'none';
+            document.getElementById('pauseIcon').classList.remove('hidden');
+            
+            drawTela();
+            drawScore();
+            drawHighScores();
+            spawnBloco();
+            gameLoop();
+            
+            startTimer(); 
+        }
+
+        // --- NOVA FAIXA DE RECORDE (JS) - Funções de verificação e exibição ---
+        function checkLiveHighScore() {
+            // Se a faixa já foi mostrada neste jogo, não faça nada
+            if (hasShownNewRecordBanner) {
+                return;
+            }
+
+            // Verifica se há recordes para comparar E se a pontuação atual é maior que o 1º lugar
+            if (highScores.length > 0 && score > highScores[0].score) {
+                hasShownNewRecordBanner = true; // Seta a flag para não mostrar de novo
+                showLiveRecordBanner();
+            } 
+            // Se não houver recordes, qualquer pontuação > 0 é o primeiro recorde
+            else if (highScores.length === 0 && score > 0) {
+                hasShownNewRecordBanner = true;
+                showLiveRecordBanner();
+            }
+        }
+
+        // --- NOVA FAIXA DE RECORDE (JS MODIFICADO) ---
+        function showLiveRecordBanner() {
+            const banner = document.getElementById('liveRecordBanner');
+            banner.textContent = `Novo Recorde! ${score} Pontos!`; // Mostra a pontuação atual
+            banner.classList.add('show'); // Adiciona a classe para deslizar para baixo
+
+            // Esconde a faixa depois de 4 segundos
+            setTimeout(() => {
+                banner.classList.remove('show'); // Remove a classe para deslizar para cima
+            }, 4000);
+        }
+        // --- FIM DAS NOVAS FUNÇÕES ---
+
+
+        function LinhasCompletas(){
+            for (let y = LIN - 1; y >= 0; y--){
+                if (jogo[y].every(cell => cell !== 0)){
+                    score += 100;
+                    jogo.splice(y, 1);
+                    jogo.unshift(Array(COL).fill(0));
+                    y++;
+                }
+            }
+            // --- NOVA FAIXA DE RECORDE (JS) - Chamada da verificação ---
+            checkLiveHighScore(); 
+        }
+
+        function drawScore(){
+            const scoreCanvas = document.getElementById('CanvasPontos'); 
+            const ctx = scoreCanvas.getContext('2d'); 
+            ctx.clearRect(0, 0, scoreCanvas.width, scoreCanvas.height);
+            ctx.fillStyle = "white";
+            ctx.font = "20px Arial";
+            ctx.textAlign = "left"; 
+            ctx.fillText(score, 10, 30);
+        }
+
+        // --- FUNÇÕES DE TIMER ---
+        function formatTime(totalSeconds) {
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            const pad = (num) => num.toString().padStart(2, '0');
+            return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        }
+        function drawTimer(){
+            const timerCanvas = document.getElementById('timerCanvas'); 
+            const ctx = timerCanvas.getContext('2d'); 
+            ctx.clearRect(0, 0, timerCanvas.width, timerCanvas.height);
+            ctx.fillStyle = "white";
+            ctx.font = "20px Arial";
+            ctx.textAlign = "center"; 
+            const timeString = formatTime(secondsPlayed);
+            ctx.fillText(timeString, timerCanvas.width / 2, 30); 
+        }
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval); 
+            secondsPlayed = 0;
+            drawTimer(); 
+            timerInterval = setInterval(() => {
+                secondsPlayed++;
+                drawTimer();
+            }, 1000); 
+        }
+
+        // --- FUNÇÃO DE INICIALIZAÇÃO ---
+        function initGame() {
+            document.getElementById('pauseIcon').classList.remove('hidden');
+            spawnBloco();
+            drawNext();
+            gameLoop();
+            startTimer(); 
+        }
+
+        // --- EVENT LISTENERS (BOTÕES, TECLADO) ---
+
+        // Lógica do botão de Start
+        document.getElementById('startGameButton').onclick = function() {
+            const nameError = document.getElementById('nameError'); 
+            let name = document.getElementById('playerNameInput').value;
+            
+            nameError.style.display = 'none';
+
+            if (name.trim() === "") {
+                nameError.style.display = 'block'; 
+                return; 
+            }
+            
+            currentPlayerName = name;
+            
+            document.getElementById('startScreenOverlay').style.display = 'none';
+
+            document.getElementById('t').style.display = 'block'; 
+            document.getElementById('fundo').style.display = 'flex'; 
+
+            initGame(); 
+        };
+
+        // Lógica do Enter no nome
+        document.getElementById('playerNameInput').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('startGameButton').click(); 
+            }
+        });
+
+        // Lógica dos controles do jogo
+        document.addEventListener('keydown', function(e){
+            if (gameOver || isPaused) return; 
+            if (e.key === 'ArrowLeft' && Colisao(-1, 0, BlocoSave)) posX--;
+            else if (e.key === 'ArrowRight' && Colisao(1, 0, BlocoSave)) posX++;
+            else if (e.key === 'ArrowDown' && Colisao(0, 1, BlocoSave)) posY++;
+            else if (e.key === 'ArrowUp') rotateBlock();
+            drawTela();
+        });
+
+        // Desenhos iniciais (antes do jogo começar)
+        drawHighScores();
+        drawTimer(); 
+
+        /* --- LÓGICA DE PAUSA E MODAIS --- */
+
+        const pauseIcon = document.getElementById('pauseIcon');
+        const pauseScreen = document.getElementById('pauseScreen');
+        const continueButton = document.getElementById('continueButton');
+        const restartPauseButton = document.getElementById('restartPauseButton');
+        const gameContainer = document.getElementById('fundo');
+        
+        const devButton = document.getElementById('devButton');
+        const devModal = document.getElementById('devModal');
+        const closeDevModalButton = document.getElementById('closeDevModalButton');
+
+        function togglePause() {
+            if (gameOver) return; 
+
+            isPaused = !isPaused;
+
+            if (isPaused) {
+                // Pausando
+                clearTimeout(gameLoopTimeout); 
+                clearInterval(timerInterval); 
+                pauseScreen.classList.remove('hidden'); 
+                pauseIcon.classList.add('hidden'); 
+                gameContainer.style.filter = 'blur(5px)'; 
+            } else {
+                // Despausando
+                pauseScreen.classList.add('hidden'); 
+                pauseIcon.classList.remove('hidden'); 
+                gameContainer.style.filter = 'none'; 
+                gameLoop();
+                
+                timerInterval = setInterval(() => {
+                    secondsPlayed++;
+                    drawTimer();
+                }, 1000);
+            }
+        }
+
+        pauseIcon.addEventListener('click', togglePause);
+
+        continueButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (isPaused) { 
+                togglePause();
+            }
+        });
+
+        restartPauseButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (isPaused) {
+                togglePause();
+            }
+            reiniciarJogo();
+        });
+
+        devButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            pauseScreen.classList.add('hidden'); 
+            devModal.classList.remove('hidden'); 
+        });
+
+        closeDevModalButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            devModal.classList.add('hidden'); 
+            pauseScreen.classList.remove('hidden'); 
+        });
+
+        // Listener para o botão de Restart da tela de Game Over
+        document.getElementById('restartGameOverButton').addEventListener('click', (e) => {
+            e.preventDefault();
+            reiniciarJogo();
+        });
+
+        /* --- LÓGICA DO EASTER EGG (KONAMI CODE) --- */
+
+        const easterEggMessage = document.getElementById('easterEggMessage');
+        
+        // Cima, Cima, Baixo, Baixo, Esquerda, Direita, Esquerda, Direita, B, A
+        const konamiCode = [
+            'ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 
+            'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 
+            'b', 'a'
+        ];
+        
+        let konamiPosition = 0;
+
+        function showEasterEggMessage(text) {
+            easterEggMessage.textContent = text;
+            easterEggMessage.style.display = 'block';
+            
+            // Esconde a mensagem depois de 3 segundos
+            setTimeout(() => {
+                easterEggMessage.style.display = 'none';
+            }, 3000);
+        }
+
+        document.addEventListener('keydown', function(e) {
+            // Pega a tecla pressionada
+            const key = e.key.toLowerCase(); // Converte para minúsculo para 'b' e 'a'
+            
+            // Pega a tecla esperada no código
+            const requiredKey = konamiCode[konamiPosition];
+
+            if (key === requiredKey) {
+                // Acertou a tecla
+                konamiPosition++;
+
+                // Se o código inteiro foi digitado
+                if (konamiPosition === konamiCode.length) {
+                    
+                    showEasterEggMessage('✨ Código Secreto Ativado! ✨');
+                    
+                    // Reseta a posição para poder digitar o código novamente
+                    konamiPosition = 0;
+                }
+            } else {
+                // Errou a tecla, reseta a contagem
+                // (Com uma verificação para não resetar se a primeira tecla for pressionada novamente)
+                if (key === konamiCode[0]) {
+                    konamiPosition = 1; 
+                } else {
+                    konamiPosition = 0;
+                }
+            }
+        });
+        
