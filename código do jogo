@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChroBlock</title>
+    
+    <style>
+        /* --- ESTILOS GLOBAIS --- */
+        * {
+            margin: 0px;
+            padding: 0px;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            color: white; 
+            background-color: #1a1a1a;
+        }
+
+        /* --- ESTILOS DO JOGO --- */
+        .container {
+            display: flex;
+            height: 530px;
+            width: 700px;
+            align-items: center;
+            justify-content: center;
+            background-size: cover;
+            transition: filter 0.3s ease-in-out;
+        }
+
+        .coluna1 {
+            height: 400px;
+            width: 150px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .coluna2 {
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .coluna3 {
+            height: 400px;
+        }
+
+        canvas {
+            background: rgb(0, 0, 0);
+        }
+
+        /* PADRÃO DE BORDAS DO JOGO */
+        .coluna2 canvas {
+            border-top: 4px solid #00c3fa;    /* Azul */
+            border-right: 4px solid #fae100; /* Amarelo */
+            border-bottom: 4px solid #ff3b3b; /* Vermelho */
+            border-left: 4px solid #30ff30;   /* Verde */
+        }
+
+        .coluna3 canvas {
+            border-top: 4px solid #00c3fa;
+            border-right: 4px solid #fae100;
+            border-bottom: 4px solid #ff3b3b;
+            border-left: 4px solid #30ff30;
+            border-radius: 10px;
+        }
+
+        .coluna1 canvas {
+            border-top: 4px solid #00c3fa;
+            border-right: 4px solid #fae100;
+            border-bottom: 4px solid #ff3b3b;
+            border-left: 4px solid #30ff30;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        #highScoresList {
+            color: white;
+            font-size: 14px;
+            text-align: left;
+            width: 100%;
+            background: rgb(0, 0, 0);
+            border-top: 4px solid #00c3fa;
+            border-right: 4px solid #fae100;
+            border-bottom: 4px solid #ff3b3b;
+            border-left: 4px solid #30ff30;
+            border-radius: 10px;
+            padding: 5px;
+            min-height: 180px;
+            box-sizing: border-box;
+        }
+
+        #highScoresList div {
+            padding: 2px 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* --- ESTILOS DOS MODAIS (POPUPS) --- */
+
+        /* TELA DE INÍCIO (NOME) */
+        #startScreenOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #startScreenModal {
+            background: #222;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+            border: 2px solid #fff;
+        }
+
+        #startScreenModal h2 {
+            margin-bottom: 15px;
+        }
+
+        #playerNameInput {
+            font-size: 18px;
+            padding: 5px;
+            text-align: center;
+            width: 200px;
+            margin-bottom: 20px;
+        }
+
+        #startGameButton {
+            font-size: 18px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        /* --- MUDANÇA DE COR AQUI --- */
+        #pauseIcon {
+            position: fixed;
+            top: 20px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background-color: rgba(40, 40, 40, 0.8);
+            color: #fff; /* Ícone || fica branco */
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            
+            /* Bordas coloridas (usei 3px para manter o tamanho) */
+            border-top: 3px solid #00c3fa;    /* Azul */
+            border-right: 3px solid #fae100;   /* Amarelo */
+            border-bottom: 3px solid #ff3b3b;  /* Vermelho */
+            border-left: 3px solid #30ff30;    /* Verde */
+
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 5;
+            transition: all 0.2s ease;
+            font-family: Arial, sans-serif;
+            user-select: none;
+        }
+
+        #pauseIcon:hover {
+            background-color: #00c3fa; /* Fundo azul no hover */
+            color: #000; /* Ícone preto no hover */
+            transform: scale(1.1);
+            /* As bordas coloridas serão cobertas pelo fundo, o que é normal no hover */
+        }
+        /* --- FIM DAS MUDANÇAS --- */
+
+        .pause-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            transition: opacity 0.3s ease-in-out;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .pause-content {
+            background-color: #222;
+            padding: 40px 60px;
+            text-align: center;
+            border-radius: 10px;
+            /* Borda colorida */
+            border-top: 5px solid #00c3fa;    /* Azul */
+            border-right: 5px solid #fae100;   /* Amarelo */
+            border-bottom: 5px solid #ff3b3b;  /* Vermelho */
+            border-left: 5px solid #30ff30;    /* Verde */
+        }
+
+        .pause-content h2 {
+            color: #00c3fa;
+            font-size: 3em;
+            margin-bottom: 30px;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .pause-content ul {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 40px;
+        }
+
+        .pause-content li {
+            margin-bottom: 20px;
+        }
+
+        .pause-content a {
+            display: inline-block;
+            text-decoration: none;
+            color: #fff;
+            background-color: transparent;
+            padding: 15px 30px;
+            border: 2px solid #fff;
+            border-radius: 5px;
+            font-size: 1.2em;
+            transition: all 0.2s ease-in-out;
+            width: 200px;
+        }
+
+        .pause-content a:hover {
+            background-color: transparent;
+            color: #00c3fa;
+            border-color: #00c3fa;
+            box-shadow: 0 0 15px #00c3fa;
+            transform: scale(1.05);
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* ESTILO PARA A LISTA DE CRÉDITOS */
+        #devList {
+            text-align: left;
+            font-size: 1.1em;
+            color: #fff;
+        }
+        #devList li {
+            margin-bottom: 15px;
+        }
+
+        #devList a {
+            color: #fff;
+            text-decoration: none;
+            transition: color 0.2s ease;
+            
+            display: inline;
+            background-color: transparent;
+            border: none;
+            padding: 0;
+            width: auto;
+            box-shadow: none;
+        }
+        #devList a:hover {
+            color: #00c3fa;
+            text-decoration: underline;
+            
+            border: none;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* Esconde os elementos do jogo por padrão */
+        #t, #fundo, #restart {
+            display: none;
+        }
+
+        /* --- ESTILO PARA GAME OVER SCREEN --- */
+        #gameOverScreen .pause-content p {
+            font-size: 1.8em; /* Aumenta o tamanho do texto da pontuação e tempo */
+            color: #fff;
+            margin: 15px 0;
+        }
+        #gameOverScreen .pause-content p span {
+            color: #fae100; /* Cor para os valores */
+        }
+        
+        /* --- ESTILO DO EASTER EGG --- */
+        #easterEggMessage {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #111;
+            color: #00c3fa; /* Azul */
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            z-index: 200;
+            display: none; /* Começa escondido */
+            border-top: 3px solid #00c3fa;
+            border-right: 3px solid #fae100;
+            border-bottom: 3px solid #ff3b3b;
+            border-left: 3px solid #30ff30;
+            box-shadow: 0 0 15px #000;
+        }
+
+        /* --- NOVA FAIXA DE RECORDE (CSS MODIFICADO) --- */
+        #liveRecordBanner {
+            position: fixed;
+            top: -100px; /* Começa fora da tela */
+            left: 0;
+            width: 100%;
+            
+            /* Destaque com cor */
+            background-color: #fae100; /* Fundo Amarelo */
+            color: #1a1a1a; /* Texto Escuro */
+            
+            padding: 15px 0;
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            z-index: 200;
+            
+            /* Efeitos de Texto */
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.7); /* Sombra clara no texto */
+
+            /* Animação de entrada/saída */
+            transition: top 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Efeito "bounce" */
+            
+            /* Sombra e borda (invertida) */
+            border-bottom: 4px solid #f0d000; /* Amarelo um pouco mais escuro */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+
+        /* Classe que o JS vai adicionar para mostrar */
+        #liveRecordBanner.show {
+            top: 0; /* Move para a tela */
+        }
+
+    </style>
+</head>
+<body>
+    
+    <div id="liveRecordBanner">Temos um novo campeão! </div>
+
+    <div id="startScreenOverlay">
+        <div id="startScreenModal">
+            <h2>Bem-vindo ao ChroBlock!</h2>
+            <p>Digite seu nome:</p>
+            <input type="text" id="playerNameInput" maxlength="8" autofocus>
+            
+            <p id="nameError" style="color: #ff3b3b; display: none; margin-top: 10px; margin-bottom: -10px;">
+                Por favor, digite seu nome!
+            </p>
+            <br>
+            <button id="startGameButton">Start Game</button>
+        </div>
+    </div>
+
+    <div id="pauseIcon" class="hidden">||</div>
+
+    <div id="pauseScreen" class="pause-screen hidden">
+        <div class="pause-content">
+            <h2>PAUSADO</h2>
+            <ul>
+                <li><a href="#" id="continueButton">CONTINUAR</a></li>
+                <li><a href="#" id="restartPauseButton">REINICIAR</a></li>
+                <li><a href="#" id="devButton">CRÉDITOS</a></li>
+            </ul>
+        </div>
+    </div>
+    
+    <div id="devModal" class="pause-screen hidden">
+        <div class="pause-content">
+            <h2>CRÉDITOS</h2>
+            <ul id="devList">
+                <li><a href="https://github.com/izabella-almeida" target="_blank">Izabella de Almeida Ribeiro Correa Lima</a></li>
+                <li><a href="https://github.com/Kaiohnl" target="_blank">Kaio Henrique Neves Lima</a></li>
+                <li><a href="https://github.com/Dex14028" target="_blank">Marcos Dexter Ribeiro da Silva</a></li>
+                <li><a href="https://github.com/0001139405-alt" target="_blank">Maria Eduarda Moreira do Santos</a></li>
+                <li><a href="https://github.com/rafaelyoshitake" target="_blank">Rafael Yoshitake Nogueira</a></li>
+            </ul>
+            <a href="#" id="closeDevModalButton">VOLTAR</a>
+        </div>
+    </div>
+
+    <div id="gameOverScreen" class="pause-screen hidden">
+        <div class="pause-content">
+            <h2>GAME OVER</h2>
+
+            <p id="newHighScoreMessage" style="color: #00c3fa; font-size: 1.2em; display: none; margin: 15px 0;">Parabéns! Novo Recorde!</p>
+            
+            <p>PONTUAÇÃO: <span id="finalScore">0</span></p>
+            <p>TEMPO: <span id="finalTime">00:00:00</span></p>
+            <a href="#" id="restartGameOverButton">REINICIAR</a>
+        </div>
+    </div>
+
+    <p id="easterEggMessage"></p>
+    <h1 id="t">CHROBLOCK</h1>
+    <div id="fundo" class="container">
+        <div class="coluna1">
+            <h3>SCORE</h3>
+            <canvas id="CanvasPontos" width="150" height="50"></canvas> 
+            
+            <h3 style="margin-top: 10px;">TIME</h3>
+            <canvas id="timerCanvas" width="150" height="50"></canvas>
+
+            <h3 style="margin-top: 10px;">HIGH SCORES</h3>
+            <div id="highScoresList">
+                </div>
+        </div>
+
+        <div class="coluna2">
+            <canvas id="CanvasJogo" width="200" height="400"></canvas>
+        </div>
+        <div class="coluna3">
+            <h3>NEXT</h3>
+            <canvas width="150" height="150"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // VARIÁVEIS GLOBAIS
+        let currentPlayerName = "Player";
+        let gameOver = false;
+        let gameLoopTimeout = '';
+        let score = 0;
+        let isPaused = false;
+        let timerInterval = null;
+        let secondsPlayed = 0;
+        let hasShownNewRecordBanner = false; // <-- NOVA FAIXA DE RECORDE (JS)
+
+        const MAX_HIGH_SCORES = 5;
+        let highScores = JSON.parse(localStorage.getItem('chroBlockHighScores')) || [];
+
+        const CORES = [
+            null, "blue", "blue", "green", "green",
+            "yellow", "yellow", "red", "red"
+        ];
+
+        const Chroblocks = [
+            [],[
+    [1,0,0],
+    [0,0,0],
+    [0,0,0]],
+    [
+    [0,2,0],
+    [0,2,0],
+    [0,2,0]],
+    [
+    [3,0,0],
+    [3,0,0],
+    [3,3,0]
+    ],
+    [[4,4,4]
+    ,[0,4,0], 
+     [0,4,0]
+    ],
+    [[8,8,0],
+     [8,8,0],
+     [8,0,0]],
+    [
+      [6,6,0],
+      [0,6,6],
+      [0,6,0]],
+    [
+    [7,7,0],
+    [0,7,0],
+    [0,7,7]
+    ],
+    [[0,5,5],
+     [0,5,0],
+     [5,5,0]]
+];
+        const LIN = 20;
+        const COL = 10;
+        let jogo = Array.from({ length: LIN }, () => Array(COL).fill(0));
+
+        let BlocoSave = '';
+        let posX = 0, posY = 0;
+        let ProxBloco = null;
+
+        // --- FUNÇÕES DE RENDERIZAÇÃO E JOGO ---
+
+        function drawTela(){
+            const canvas = document.getElementById('CanvasJogo');
+            const chro = canvas.getContext('2d');
+            chro.clearRect(0, 0, canvas.width, canvas.height);
+            for (let y = 0; y < LIN; y++){
+                for (let x = 0; x < COL; x++){
+                    if (jogo[y][x]){
+                        chro.fillStyle = CORES[jogo[y][x]];
+                        chro.fillRect(x * 20, y * 20, 20, 20);
+                    }
+                }
+            }
+            if (BlocoSave){
+                for (let i = 0; i < BlocoSave.length; i++){
+                    for (let j = 0; j < BlocoSave[i].length; j++){
+                        if (BlocoSave[i][j]) {
+                            chro.fillStyle = CORES[BlocoSave[i][j]];
+                            chro.fillRect((posX + j) * 20, (posY + i) * 20, 20, 20);
+                        }
+                    }
+                }
+            }
+        }
+        function Colisao(movX, movY, bloco) {
+            for (let i = 0; i < bloco.length; i++){
+                for (let j = 0; j < bloco[i].length; j++){
+                    if (bloco[i][j]){
+                        let x = posX + j + movX; 
+                        let y = posY + i + movY;
+                        if (x < 0 || x >= COL || y >= LIN || (y >= 0 && jogo[y][x])){
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+        function fixaBloco(){
+            for (let i = 0; i < BlocoSave.length; i++) {
+                for (let j = 0; j < BlocoSave[i].length; j++) {
+                    if (BlocoSave[i][j]) {
+                        let x = posX + j;
+                        let y = posY + i;
+                        if (y < 0){
+                            endGame();
+                            return; 
+                        }
+                        jogo[y][x] = BlocoSave[i][j];
+                    } 
+                }
+            }
+            LinhasCompletas();
+            spawnBloco();
+        }
+        function gameLoop() {
+            clearTimeout(gameLoopTimeout);
+            if (gameOver || isPaused) return; 
+            if (Colisao(0, 1, BlocoSave)) {
+                posY++;
+            }else{
+                fixaBloco();
+                if (gameOver) return; 
+            }
+            drawTela();
+            drawScore();
+            gameLoopTimeout = setTimeout(gameLoop, 500);
+        }
+        function rotateBlock(){
+            const newBlock = [];
+            const size = BlocoSave.length;
+            for (let i = 0; i < size; i++){ 
+                newBlock[i] = [];
+                for (let j = 0; j < size; j++){
+                    newBlock[i][j] = BlocoSave[size - j - 1][i];
+                }
+            }
+            if (Colisao(0, 0, newBlock)) {
+                BlocoSave = newBlock;
+            }
+        }
+        function spawnBloco(){
+            if (ProxBloco === null){
+                let idx = Math.floor(Math.random() * (Chroblocks.length - 1)) + 1;
+                ProxBloco = JSON.parse(JSON.stringify(Chroblocks[idx]));
+            }
+            BlocoSave = ProxBloco;
+            posX = 3;
+            posY = 0;
+            let idx = Math.floor(Math.random() * (Chroblocks.length - 1)) + 1;
+            ProxBloco = JSON.parse(JSON.stringify(Chroblocks[idx]));
+            drawNext();
+            if (!Colisao(0, 0, BlocoSave)){
+                endGame();
+                return;
+            }
+        }
+        function drawNext(){
+            const canvas = document.querySelector('.coluna3 canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (!ProxBloco) return;
+            let movX = 2;
+            let movY = 2;
+            for (let i = 0; i < ProxBloco.length; i++) {
+                for (let j = 0; j < ProxBloco[i].length; j++) {
+                    if (ProxBloco[i][j]) {
+                        ctx.fillStyle = CORES[ProxBloco[i][j]];
+                        ctx.fillRect((movX + j) * 20, (movY + i) * 20, 20, 20);
+                    }
+                }
+            }
+        }
+
+        // --- FUNÇÕES DE PONTUAÇÃO E ESTADO DO JOGO ---
+
+        // MODIFICAÇÃO DE RECORDE: Função 'endGame' atualizada
+        function endGame() {
+            gameOver = true;
+            clearTimeout(gameLoopTimeout);
+            clearInterval(timerInterval); 
+            BlocoSave = null;
+            drawTela();
+            
+            // 1. Captura se é um novo recorde
+            const isNewBest = checkHighScore(score);
+            
+            drawHighScores();
+            
+            document.getElementById('pauseIcon').classList.add('hidden');
+
+            // 2. Controla a exibição da mensagem
+            const messageEl = document.getElementById('newHighScoreMessage');
+            if (isNewBest) {
+                messageEl.style.display = 'block'; // Mostra a mensagem
+            } else {
+                messageEl.style.display = 'none'; // Esconde a mensagem
+            }
+
+            // 3. Exibe a tela de Game Over (depois de configurar a mensagem)
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalTime').textContent = formatTime(secondsPlayed);
+            document.getElementById('fundo').style.filter = 'blur(5px)'; 
+        }
+
+        // MODIFICAÇÃO DE RECORDE: Função 'checkHighScore' atualizada
+        function checkHighScore(currentScore) {
+            if (currentScore === 0) return false; // Retorna 'false' se a pontuação for 0
+
+            // Verifica se é o novo recorde ANTES de adicionar a pontuação na lista
+            const isNewBestScore = highScores.length === 0 || currentScore > highScores[0].score;
+            
+            // Lógica original para verificar se é um high score (top 5)
+            const isHighScore = highScores.length < MAX_HIGH_SCORES || currentScore > highScores[highScores.length - 1].score;
+
+            if (isHighScore) {
+                const name = currentPlayerName; 
+                const newScore = { name: name, score: currentScore };
+                highScores.push(newScore);
+                highScores.sort((a, b) => b.score - a.score); // Ordena
+                highScores.splice(MAX_HIGH_SCORES); // Mantém apenas o top 5
+                localStorage.setItem('chroBlockHighScores', JSON.stringify(highScores));
+            }
+            
+            return isNewBestScore; // Retorna true se for o novo recorde, false se não
+        }
+        
+        function drawHighScores() {
+            const listElement = document.getElementById('highScoresList');
+            listElement.innerHTML = ""; 
+            if (highScores.length === 0) {
+                listElement.innerHTML = "<div style='padding: 5px;'>Nenhum recorde!</div>";
+                return;
+            }
+            for (let i = 0; i < highScores.length; i++) {
+                listElement.innerHTML += `<div>${i + 1}. ${highScores[i].name} - ${highScores[i].score}</div>`;
+            }
+        }
+        
+        // MODIFICAÇÃO DE RECORDE: Função 'reiniciarJogo' atualizada
+        function reiniciarJogo(){
+            clearTimeout(gameLoopTimeout);
+            clearInterval(timerInterval); 
+            
+            jogo = Array.from({ length: LIN }, () => Array(COL).fill(0));
+            score = 0;
+            BlocoSave = null;
+            ProxBloco = null;
+            gameOver = false; 
+            isPaused = false;
+            hasShownNewRecordBanner = false; // <-- NOVA FAIXA DE RECORDE (JS) - RESET
+            
+            // Esconde a faixa animada (caso o jogo reinicie rápido)
+            document.getElementById('liveRecordBanner').classList.remove('show');
+
+            document.getElementById('pauseScreen').classList.add('hidden');
+            document.getElementById('gameOverScreen').classList.add('hidden'); 
+
+            // LINHA ADICIONADA para esconder a mensagem de recorde
+            document.getElementById('newHighScoreMessage').style.display = 'none';
+
+            document.getElementById('fundo').style.filter = 'none';
+            document.getElementById('pauseIcon').classList.remove('hidden');
+            
+            drawTela();
+            drawScore();
+            drawHighScores();
+            spawnBloco();
+            gameLoop();
+            
+            startTimer(); 
+        }
+
+        // --- NOVA FAIXA DE RECORDE (JS) - Funções de verificação e exibição ---
+        function checkLiveHighScore() {
+            // Se a faixa já foi mostrada neste jogo, não faça nada
+            if (hasShownNewRecordBanner) {
+                return;
+            }
+
+            // Verifica se há recordes para comparar E se a pontuação atual é maior que o 1º lugar
+            if (highScores.length > 0 && score > highScores[0].score) {
+                hasShownNewRecordBanner = true; // Seta a flag para não mostrar de novo
+                showLiveRecordBanner();
+            } 
+            // Se não houver recordes, qualquer pontuação > 0 é o primeiro recorde
+            else if (highScores.length === 0 && score > 0) {
+                hasShownNewRecordBanner = true;
+                showLiveRecordBanner();
+            }
+        }
+
+        // --- NOVA FAIXA DE RECORDE (JS MODIFICADO) ---
+        function showLiveRecordBanner() {
+            const banner = document.getElementById('liveRecordBanner');
+            banner.textContent = `Novo Recorde! ${score} Pontos!`; // Mostra a pontuação atual
+            banner.classList.add('show'); // Adiciona a classe para deslizar para baixo
+
+            // Esconde a faixa depois de 4 segundos
+            setTimeout(() => {
+                banner.classList.remove('show'); // Remove a classe para deslizar para cima
+            }, 4000);
+        }
+        // --- FIM DAS NOVAS FUNÇÕES ---
+
+
+        function LinhasCompletas(){
+            for (let y = LIN - 1; y >= 0; y--){
+                if (jogo[y].every(cell => cell !== 0)){
+                    score += 100;
+                    jogo.splice(y, 1);
+                    jogo.unshift(Array(COL).fill(0));
+                    y++;
+                }
+            }
+            // --- NOVA FAIXA DE RECORDE (JS) - Chamada da verificação ---
+            checkLiveHighScore(); 
+        }
+
+        function drawScore(){
+            const scoreCanvas = document.getElementById('CanvasPontos'); 
+            const ctx = scoreCanvas.getContext('2d'); 
+            ctx.clearRect(0, 0, scoreCanvas.width, scoreCanvas.height);
+            ctx.fillStyle = "white";
+            ctx.font = "20px Arial";
+            ctx.textAlign = "left"; 
+            ctx.fillText(score, 10, 30);
+        }
+
+        // --- FUNÇÕES DE TIMER ---
+        function formatTime(totalSeconds) {
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            const pad = (num) => num.toString().padStart(2, '0');
+            return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        }
+        function drawTimer(){
+            const timerCanvas = document.getElementById('timerCanvas'); 
+            const ctx = timerCanvas.getContext('2d'); 
+            ctx.clearRect(0, 0, timerCanvas.width, timerCanvas.height);
+            ctx.fillStyle = "white";
+            ctx.font = "20px Arial";
+            ctx.textAlign = "center"; 
+            const timeString = formatTime(secondsPlayed);
+            ctx.fillText(timeString, timerCanvas.width / 2, 30); 
+        }
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval); 
+            secondsPlayed = 0;
+            drawTimer(); 
+            timerInterval = setInterval(() => {
+                secondsPlayed++;
+                drawTimer();
+            }, 1000); 
+        }
+
+        // --- FUNÇÃO DE INICIALIZAÇÃO ---
+        function initGame() {
+            document.getElementById('pauseIcon').classList.remove('hidden');
+            spawnBloco();
+            drawNext();
+            gameLoop();
+            startTimer(); 
+        }
+
+        // --- EVENT LISTENERS (BOTÕES, TECLADO) ---
+
+        // Lógica do botão de Start
+        document.getElementById('startGameButton').onclick = function() {
+            const nameError = document.getElementById('nameError'); 
+            let name = document.getElementById('playerNameInput').value;
+            
+            nameError.style.display = 'none';
+
+            if (name.trim() === "") {
+                nameError.style.display = 'block'; 
+                return; 
+            }
+            
+            currentPlayerName = name;
+            
+            document.getElementById('startScreenOverlay').style.display = 'none';
+
+            document.getElementById('t').style.display = 'block'; 
+            document.getElementById('fundo').style.display = 'flex'; 
+
+            initGame(); 
+        };
+
+        // Lógica do Enter no nome
+        document.getElementById('playerNameInput').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('startGameButton').click(); 
+            }
+        });
+
+        // Lógica dos controles do jogo
+        document.addEventListener('keydown', function(e){
+            if (gameOver || isPaused) return; 
+            if (e.key === 'ArrowLeft' && Colisao(-1, 0, BlocoSave)) posX--;
+            else if (e.key === 'ArrowRight' && Colisao(1, 0, BlocoSave)) posX++;
+            else if (e.key === 'ArrowDown' && Colisao(0, 1, BlocoSave)) posY++;
+            else if (e.key === 'ArrowUp') rotateBlock();
+            drawTela();
+        });
+
+        // Desenhos iniciais (antes do jogo começar)
+        drawHighScores();
+        drawTimer(); 
+
+        /* --- LÓGICA DE PAUSA E MODAIS --- */
+
+        const pauseIcon = document.getElementById('pauseIcon');
+        const pauseScreen = document.getElementById('pauseScreen');
+        const continueButton = document.getElementById('continueButton');
+        const restartPauseButton = document.getElementById('restartPauseButton');
+        const gameContainer = document.getElementById('fundo');
+        
+        const devButton = document.getElementById('devButton');
+        const devModal = document.getElementById('devModal');
+        const closeDevModalButton = document.getElementById('closeDevModalButton');
+
+        function togglePause() {
+            if (gameOver) return; 
+
+            isPaused = !isPaused;
+
+            if (isPaused) {
+                // Pausando
+                clearTimeout(gameLoopTimeout); 
+                clearInterval(timerInterval); 
+                pauseScreen.classList.remove('hidden'); 
+                pauseIcon.classList.add('hidden'); 
+                gameContainer.style.filter = 'blur(5px)'; 
+            } else {
+                // Despausando
+                pauseScreen.classList.add('hidden'); 
+                pauseIcon.classList.remove('hidden'); 
+                gameContainer.style.filter = 'none'; 
+                gameLoop();
+                
+                timerInterval = setInterval(() => {
+                    secondsPlayed++;
+                    drawTimer();
+                }, 1000);
+            }
+        }
+
+        pauseIcon.addEventListener('click', togglePause);
+
+        continueButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (isPaused) { 
+                togglePause();
+            }
+        });
+
+        restartPauseButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (isPaused) {
+                togglePause();
+            }
+            reiniciarJogo();
+        });
+
+        devButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            pauseScreen.classList.add('hidden'); 
+            devModal.classList.remove('hidden'); 
+        });
+
+        closeDevModalButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            devModal.classList.add('hidden'); 
+            pauseScreen.classList.remove('hidden'); 
+        });
+
+        // Listener para o botão de Restart da tela de Game Over
+        document.getElementById('restartGameOverButton').addEventListener('click', (e) => {
+            e.preventDefault();
+            reiniciarJogo();
+        });
+
+        /* --- LÓGICA DO EASTER EGG (KONAMI CODE) --- */
+
+        const easterEggMessage = document.getElementById('easterEggMessage');
+        
+        // Cima, Cima, Baixo, Baixo, Esquerda, Direita, Esquerda, Direita, B, A
+        const konamiCode = [
+            'ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 
+            'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 
+            'b', 'a'
+        ];
+        
+        let konamiPosition = 0;
+
+        function showEasterEggMessage(text) {
+            easterEggMessage.textContent = text;
+            easterEggMessage.style.display = 'block';
+            
+            // Esconde a mensagem depois de 3 segundos
+            setTimeout(() => {
+                easterEggMessage.style.display = 'none';
+            }, 3000);
+        }
+
+        document.addEventListener('keydown', function(e) {
+            // Pega a tecla pressionada
+            const key = e.key.toLowerCase(); // Converte para minúsculo para 'b' e 'a'
+            
+            // Pega a tecla esperada no código
+            const requiredKey = konamiCode[konamiPosition];
+
+            if (key === requiredKey) {
+                // Acertou a tecla
+                konamiPosition++;
+
+                // Se o código inteiro foi digitado
+                if (konamiPosition === konamiCode.length) {
+                    
+                    showEasterEggMessage('✨ Código Secreto Ativado! ✨');
+                    
+                    // Reseta a posição para poder digitar o código novamente
+                    konamiPosition = 0;
+                }
+            } else {
+                // Errou a tecla, reseta a contagem
+                // (Com uma verificação para não resetar se a primeira tecla for pressionada novamente)
+                if (key === konamiCode[0]) {
+                    konamiPosition = 1; 
+                } else {
+                    konamiPosition = 0;
+                }
+            }
+        });
+        
+    </script>
+</body>
+</html>
